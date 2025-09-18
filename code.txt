@@ -1,0 +1,341 @@
+import pygame
+import random
+import math
+
+pygame.init() # pygame 초기화
+
+
+# ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+# 내용 추가
+# ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+
+def rank(genetrait):
+    ranking = []
+    for i in range(len(genetrait)):
+        ranking.append(0)
+    for i in range(len(genetrait)):
+        for j in range(len(genetrait) ):
+            if i==j: continue
+            elif genetrait[i] > genetrait[j]: ranking[j]+=1
+    for i in range(len(ranking)):
+        while ranking.count(i) >= 2:
+            ranking[ranking.index(i)] += 1
+
+    return ranking
+
+def crossbreeding(mf):
+    tempsd = [[], []]
+    sd = []
+    for i in range(0, len(mf[1])-5):
+        if mf[0][i] == -999 and mf[1][i] == -999:
+            pass
+        elif mf[0][i] == -999:
+            tempsd[0].append(mf[1][i])
+        elif mf[1][i] == -999:
+            tempsd[0].append(mf[0][i])
+        else:
+            mfr = random.randint(0, 1)
+            tempsd[0].append(mf[mfr][i])
+            mfr = random.randint(0, 1)
+            tempsd[1].append(mf[mfr][i])
+    sd.append(tempsd[0])
+    sd.append(tempsd[1])
+    return sd
+
+def manywife(genepool, genetrait):
+    ranking = rank(genetrait)
+    sd = []
+
+    for i in range(1, 8):
+        mf = []
+        mf.append(genepool[ranking.index(0)])
+        mf.append(genepool[ranking.index(i)])
+        tempsd = crossbreeding(mf)
+        sd.append(tempsd[0])
+    return sd
+
+# ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+# ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+
+
+
+
+
+
+class obj(pygame.sprite.Sprite):
+    def __init__(self, img):
+        super().__init__()
+        self.image = img
+        self.rect = img.get_rect()
+
+
+class lidars(pygame.sprite.Sprite):
+    def __init__(self, img, s):
+        super().__init__()
+        self.image = img
+        self.rect = img.get_rect()
+        self.s = s
+
+    def move(self, x, y, angle, image):
+        rotated = pygame.transform.rotate(image, angle) # de 만큼 회전
+        self.image = rotated
+        self.rect = rotated.get_rect() # 회전한 이미지의 위치 객체
+        if self.s == "m":
+            self.rect.center = (x + math.sin(math.radians(angle))*70, y + math.cos(math.radians(angle))*70) # 위치 객체의 위치 설정
+        elif self.s == "l":
+            self.rect.center = (x + math.sin(math.radians(angle))*70, y + math.cos(math.radians(angle))*70)
+        elif self.s == "r":
+            self.rect.center = (x + math.sin(math.radians(angle))*70, y + math.cos(math.radians(angle))*70)
+
+    def che(self):
+        if pygame.sprite.collide_mask(line, self):
+            print(self.s)
+            return self.s
+        return 0
+
+class cars(pygame.sprite.Sprite):
+    def __init__(self, img, x, y):
+        super().__init__()
+        self.image = img
+        self.rect = img.get_rect()
+        self.x = x  
+        self.y = y
+        self.rect.center = (x, y)
+        self.mask = pygame.mask.from_surface(img)
+        self.go = False
+        self.dt = 5
+        self.dirx = 1   
+        self.diry = 1
+        self.angle = 180
+        self.previ = 180
+
+    def start(self, angle):
+        self.angle = angle
+        self.go = True
+
+    def move(self):
+        if not self.go : return self.x, self.y, self.angle, self.go
+              
+        xd = math.sin(math.radians(self.angle)) * self.dt *self.dirx
+        yd = math.cos(math.radians(self.angle)) * self.dt *self.diry
+        self.x += xd
+        self.y += yd
+
+        rotated = pygame.transform.rotate(car_image, self.angle)
+        self.image = rotated
+        self.rect = rotated.get_rect() # 회전한 이미지의 위치 객체
+        self.rect.center = (self.x, self.y) # 위치 객체의 위치 설정
+        if pygame.sprite.collide_mask(line, self):
+            self.go = False
+
+        return self.x, self.y, self.angle, self.go
+
+
+screen = pygame.display.set_mode((1280, 720))
+board = pygame.Surface(screen.get_size()) # 크기를 기반으로 게임판 설정
+pygame.display.set_caption("자율 주행 시뮬레이션") # 게임 이름 설정
+
+objects = pygame.sprite.Group()
+
+line_image = pygame.image.load("line.png").convert_alpha() # 이미지 업로드
+leftimg = pygame.image.load("leri.png").convert_alpha() # 이미지 업로드
+rightimg = pygame.image.load("leri.png").convert_alpha() # 이미지 업로드
+midimg = pygame.image.load("mid.png").convert_alpha() # 이미지 업로드
+car_image = pygame.image.load("car.png").convert_alpha() # 이미지 업로드
+
+line = obj(line_image)
+line.rect.x = 0
+line.rect.y = 0
+line.mask = pygame.mask.from_surface(line.image)
+objects.add(line)
+
+def inits(n, cros, extr):
+    global caros, lefts, rights, mids, car_image, lin_image, leftimg, rightimg, midimg, genepool, lifetime, fme
+
+    caros = pygame.sprite.Group()
+    lefts = pygame.sprite.Group()
+    rights = pygame.sprite.Group()
+    mids = pygame.sprite.Group()
+
+    carpos = []
+    genepool = []
+    lifetime = []
+
+    fme = 0
+    genetic = 0
+
+    gen = n
+    if cros == "manywife":
+        genetic = 7
+
+    while gen:
+        if genetic:
+            genepool.append(extr.pop(0))
+            genetic -= 1
+        else:
+            genepool.append([])
+
+        lifetime.append(0)
+        car = cars(car_image, random.randrange(1020, 1081), 300)
+        car.mask = pygame.mask.from_surface(car.image)
+        car.start(180)
+        caros.add(car)
+
+        leftlidar = lidars(leftimg, "l")
+        leftlidar.mask = pygame.mask.from_surface(leftlidar.image)
+        lefts.add(leftlidar)
+
+        midlidar = lidars(midimg, "m")
+        midlidar.mask = pygame.mask.from_surface(midlidar.image)
+        mids.add(midlidar)
+
+        rightlidar = lidars(rightimg, "r")
+        rightlidar.mask = pygame.mask.from_surface(rightlidar.image)
+        rights.add(rightlidar)
+        gen -= 1
+
+inits(64, "X", "X")
+
+
+# ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+# 시뮬레이터 시작
+# ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+
+generation = 1
+
+done = True # 무한 반복을 위한 done 변수를 True로 설정
+
+while done : # done이 True일 경우 (무한 반복)
+    for event in pygame.event.get() : # 이벤트 인식
+        if event.type == pygame.QUIT : # 종료 버튼을 누른 경우
+            done = False # done을 False로 설정
+
+    carpos = []
+    nowleft = []
+    nowright = []
+    nowmid = []
+
+    con = 0
+    for i in caros:
+        tempx, tempy, angle, go = i.move()
+        carpos.append((tempx, tempy, angle, go))
+        con += 1
+
+    con = 0
+    for i in lefts:
+        if not carpos[con][3]: 
+            nowleft.append(0)
+            con += 1
+            continue
+        temp = carpos[con]
+        tempx = temp[0]
+        tempy = temp[1]
+        tempa = temp[2]
+        i.move(tempx, tempy, tempa+30, leftimg)
+        if i.che(): nowleft.append(1)
+        else: nowleft.append(0)
+        con += 1
+
+    con = 0
+    for i in mids:
+        if not carpos[con][3]: 
+            nowmid.append(0)
+            con += 1
+            continue
+        temp = carpos[con]
+        tempx = temp[0]
+        tempy = temp[1]
+        tempa = temp[2]
+        i.move(tempx, tempy, tempa, midimg)
+        if i.che(): nowmid.append(1)
+        else: nowmid.append(0)
+        con += 1
+
+    con = 0
+    for i in rights:
+        if not carpos[con][3]: 
+            nowright.append(0)
+            con += 1
+            continue
+        temp = carpos[con]
+        tempx = temp[0]
+        tempy = temp[1]
+        tempa = temp[2]
+        i.move(tempx, tempy, tempa-30, rightimg)
+        if i.che(): nowright.append(1)
+        else: nowright.append(0)
+        con += 1
+
+    con = 0
+    for i in caros:
+        try:
+            if genepool[con][fme]:
+                if genepool[con][fme] == -999 : print(fme+"가")
+                angle = genepool[con][fme]
+                lifetime[con] += 1
+        except:
+            if i.go or ((nowleft[con]+nowmid[con]+nowright[con] != 0) and (nowleft[con]+nowmid[con]+nowright[con] != 3)):
+                mini = 0
+                maxi = 0
+                if nowleft[con] == 1: 
+                    maxi += 8
+                    if nowmid[con] == 1:
+                        mini += 3
+                if nowright[con] == 1: 
+                    mini -= 8
+                    if nowmid[con] == 1:
+                        maxi -= 3
+                i.angle += random.randrange(mini, maxi+1)
+            elif (nowleft[con]+nowmid[con]+nowright[con] == 3):
+                i.angle = int(i.previ)
+            else: 
+                i.angle = int(i.previ)
+
+            if carpos[con][3]:
+                genepool[con].append(carpos[con][2])
+                lifetime[con] += 1
+            else:
+                genepool[con].append(-999)
+        con += 1
+    
+    i.previ = int(i.angle)
+    
+    con = 0
+    stk = 0
+    for i in caros:
+        if i.go:
+            break
+        else: 
+            stk += 1
+            if stk == len(carpos): 
+                print(genepool)
+                print(lifetime)
+                print("%d 세대" % generation)
+                generation += 1
+                ranks = rank(lifetime)
+                sd = manywife(genepool, ranks)
+                inits(64, "manywife", sd)
+
+        
+
+    lefts.draw(board)
+    rights.draw(board)
+    mids.draw(board)
+    board.fill((255, 255, 255))
+    objects.draw(board)
+    caros.draw(board)
+    screen.blit(board, (0, 0))
+
+    pygame.display.flip() # 게임판을 그린다
+
+    fme += 1
+
+    pygame.time.delay(1) # 딜레이 설정 (0.01초)
+
+# ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+# 현재까지 교배는 없음. 유전자 풀에는 각 프레임 마다의 개체의 각도가 유한개 담김.
+# 라이프 타임에는 생존한 프레임 수가 나타남. 제너레이션은 몇 번의 세대가 지났는지를 나타냄.
+# ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+
+
+
